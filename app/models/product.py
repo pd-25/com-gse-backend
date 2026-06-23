@@ -16,8 +16,8 @@ class Product(Base):
     price = Column(Numeric(10, 2), nullable=True)
     price_per_measurement = Column(String(50), nullable=True)
     min_order = Column(Integer, nullable=True)
-    country_id = Column(Integer, ForeignKey("countries.id"), nullable=True)
-    supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
+    # country_id = Column(Integer, ForeignKey("countries.id"), nullable=True)
+    # supplier_id = Column(Integer, ForeignKey("suppliers.id"), nullable=True)
     product_type_id = Column(Integer, ForeignKey("product_types.id"), nullable=True)
     category_id = Column(Integer, ForeignKey("categories.id"), nullable=True)
     id_recomended = Column(Boolean, default=False, server_default="0")
@@ -26,8 +26,8 @@ class Product(Base):
     deleted_at = Column(DateTime, nullable=True)
 
     # Relationships
-    country = relationship("Country", backref="products")
-    supplier = relationship("Supplier", backref="products")
+    # country = relationship("Country", backref="products")
+    # supplier = relationship("Supplier", backref="products")
     product_type = relationship("ProductType", backref="products")
     category = relationship("Categories", backref="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")
