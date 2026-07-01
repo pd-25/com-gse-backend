@@ -13,6 +13,7 @@ class CategoryFilterSchema(BaseModel):
     limit: Optional[int] = 30
     
 class CategoryListResponse(CategorySchema):
+    name: str
     image: Optional[str] = None
     thumbnail_image: Optional[str] = None
     total_products: int = 0
