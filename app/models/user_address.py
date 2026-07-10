@@ -17,7 +17,7 @@ class UserAddress(Base):
     city = Column(String(100), nullable=False)
     state = Column(String(100), nullable=True)
     postal_code = Column(String(20), nullable=False)
-    country = Column(String(100), nullable=False)
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False)
     is_default = Column(Boolean, default=False, server_default='0')
     created_at = Column(DateTime, default=datetime.now, server_default=text('CURRENT_TIMESTAMP'))
     updated_at = Column(DateTime, default=datetime.now, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
@@ -25,3 +25,4 @@ class UserAddress(Base):
 
     # Relationships
     user = relationship("User", back_populates="addresses")
+    country = relationship("Country", backref="countries")

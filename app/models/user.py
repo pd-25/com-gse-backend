@@ -8,10 +8,12 @@ class User(Base):
     __tablename__ = 'users'
 
     id = Column(Integer, primary_key=True)
+    slug = Column(String(255), unique=True, index=True, nullable=False)
     first_name = Column(String(100), nullable=False)
     last_name = Column(String(100), nullable=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     phone = Column(String(20), unique=True, index=True, nullable=True)
+    country_id = Column(Integer, ForeignKey("countries.id"), nullable=False)
     password = Column(String(255), nullable=False)
     avatar = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True, server_default='1')
@@ -22,3 +24,4 @@ class User(Base):
 
     # Relationships
     addresses = relationship("UserAddress", back_populates="user", cascade="all, delete-orphan")
+    country = relationship("Country", backref="countries")
