@@ -25,4 +25,4 @@ class UserAddress(Base):
 
     # Relationships
     user = relationship("User", back_populates="addresses")
-    country = relationship("Country", backref="countries")
+    country = relationship("Country", back_populates="addresses")

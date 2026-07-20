@@ -27,7 +27,7 @@ class Product(Base):
 
     # Relationships
     # country = relationship("Country", backref="products")
-    # supplier = relationship("Supplier", backref="products")
+    carts = relationship("Cart", back_populates="product", cascade="all, delete-orphan")
     product_type = relationship("ProductType", backref="products")
     category = relationship("Categories", backref="products")
     images = relationship("ProductImage", back_populates="product", cascade="all, delete-orphan")

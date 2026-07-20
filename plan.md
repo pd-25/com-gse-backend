@@ -1,7 +1,13 @@
-Global apis - 
- 1. Categories list
- 2. Cart count
- 3. fgfg
+1. Auth routes
+
+    v1/website/auth.py - 
+        v1/website/register
+        v1/website/login
+        v1/website/refresh-token
+
+Register apis validation done, req pkg install done, now need to work on the utils 
+
+
 
 # Tables
 

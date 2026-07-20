@@ -1,3 +1,5 @@
+from sqlalchemy.orm import relationship
+
 from app.database.base_class import Base
 from datetime import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Text
@@ -13,3 +15,6 @@ class Country(Base):
     created_at = Column(DateTime, default=datetime.now)
     updated_at = Column(DateTime, default=datetime.now)
     deleted_at = Column(DateTime, nullable=True)
+
+
+    addresses = relationship("UserAddress", back_populates="country", cascade="all, delete-orphan")
