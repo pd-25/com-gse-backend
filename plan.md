@@ -5,7 +5,7 @@
         v1/website/login
         v1/website/refresh-token
 
-Register apis validation done, req pkg install done, now need to work on the utils 
+Register apis validation done, req pkg install done, now need to work on the utils x₹
 
 
 
