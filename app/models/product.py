@@ -14,6 +14,12 @@ class Product(Base):
     short_desc = Column(Text, nullable=True)
     currency = Column(String(10), nullable=True)
     price = Column(Numeric(10, 2), nullable=True)
+    old_price = Column(Numeric(10, 2), nullable=True)
+    rating = Column(Numeric(2, 1), nullable=True)
+    sold_count = Column(Integer, nullable=False, default=0, server_default="0")
+    badge = Column(String(100), nullable=True)
+    is_flash_sale = Column(Boolean, nullable=False, default=False, server_default="0")
+    display_order = Column(Integer, nullable=False, default=0, server_default="0")
     price_per_measurement = Column(String(50), nullable=True)
     min_order = Column(Integer, nullable=True)
     # country_id = Column(Integer, ForeignKey("countries.id"), nullable=True)
@@ -39,4 +45,3 @@ class Product(Base):
         uselist=False,
         viewonly=True
     )
-

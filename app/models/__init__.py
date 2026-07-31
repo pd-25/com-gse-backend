@@ -9,3 +9,4 @@ from app.models.user_address import UserAddress  # noqa: F401
 from app.models.cart import Cart  # noqa: F401
 from app.models.promotional_card import PromotionalCard  # noqa: F401
 from app.models.hero_banner import HeroBanner  # noqa: F401
+from app.models.homepage_section import HomepageSection  # noqa: F401
