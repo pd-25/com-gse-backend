@@ -15,9 +15,8 @@ class Cart(Base):
     updated_at = Column(DateTime, default=datetime.now, server_default=text('CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP'))
 
     # Relationships
-    product = relationship("Product", backref="carts")
+    product = relationship("Product", back_populates="carts")
     user = relationship("User", backref="carts")
     
-
 
 

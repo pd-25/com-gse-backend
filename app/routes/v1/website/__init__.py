@@ -1,8 +1,20 @@
 from fastapi import APIRouter
 
 from app.routes.v1.website.category_route import category_router
+from app.routes.v1.website.promotional_card_route import promotional_card_router
+from app.routes.v1.website.hero_banner_route import hero_banner_router
 
 
 website_router = APIRouter()
 
 website_router.include_router(category_router, prefix="/categories", tags=["Website - Category"])
+website_router.include_router(
+    promotional_card_router,
+    prefix="/promotional-cards",
+    tags=["Website - Promotional Cards"],
+)
+website_router.include_router(
+    hero_banner_router,
+    prefix="/hero-banners",
+    tags=["Website - Hero Banners"],
+)
