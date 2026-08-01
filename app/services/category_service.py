@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from app.core.rich_text import sanitize_rich_text
 from app.models import Categories, Product
 from app.models.product_image import ProductImage
 from app.schemas.category_schema import (
@@ -13,6 +14,19 @@ from app.schemas.category_schema import (
     CategoryProductResponse,
     SubcategoryResponse,
 )
+
+
+def _category_detail_info(category: Categories) -> CategoryDetailInfo:
+    return CategoryDetailInfo(
+        id=category.id,
+        slug=category.slug,
+        name=category.name,
+        description=sanitize_rich_text(category.description),
+        quality_standards=sanitize_rich_text(category.quality_standards),
+        buying_guide=sanitize_rich_text(category.buying_guide),
+        image=category.image,
+        thumbnail_image=category.thumbnail_image,
+    )
 
 
 def fetch_categories(filters: CategoryFilterSchema, db: Session):
@@ -109,7 +123,7 @@ def fetch_category_detail(slug: str, db: Session) -> CategoryDetailResponse:
             slug=product.slug,
             title=product.title,
             brand=product.brand,
-            description=product.description,
+            description=sanitize_rich_text(product.description),
             short_desc=product.short_desc,
             currency=product.currency or "USD",
             price=float(product.price),
@@ -128,10 +142,10 @@ def fetch_category_detail(slug: str, db: Session) -> CategoryDetailResponse:
     ratings = [product.rating for product in products if product.rating is not None]
 
     return CategoryDetailResponse(
-        category=CategoryDetailInfo.model_validate(category, from_attributes=True),
+        category=_category_detail_info(category),
         subcategories=[
             SubcategoryResponse(
-                **CategoryDetailInfo.model_validate(child, from_attributes=True).model_dump(),
+                **_category_detail_info(child).model_dump(),
                 total_products=total_products,
                 min_price=float(min_price) if min_price is not None else None,
                 max_price=float(max_price) if max_price is not None else None,

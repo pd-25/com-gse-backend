@@ -10,6 +10,7 @@ from sqlalchemy import case, func, or_
 from sqlalchemy.orm import Session, joinedload
 
 from app.core.config import settings
+from app.core.rich_text import sanitize_rich_text
 from app.database.session import get_db
 from app.models.admin import Admin
 from app.models.category import Categories
@@ -129,9 +130,9 @@ def _category_dict(category: Categories) -> dict:
         "id": category.id,
         "name": category.name,
         "slug": category.slug,
-        "description": category.description,
-        "quality_standards": category.quality_standards,
-        "buying_guide": category.buying_guide,
+        "description": sanitize_rich_text(category.description),
+        "quality_standards": sanitize_rich_text(category.quality_standards),
+        "buying_guide": sanitize_rich_text(category.buying_guide),
         "image": category.image,
         "thumbnail_image": category.thumbnail_image,
         "showcase_image": category.showcase_image,
@@ -155,7 +156,7 @@ def _product_dict(product: Product) -> dict:
         "slug": product.slug,
         "title": product.title,
         "brand": product.brand,
-        "description": product.description,
+        "description": sanitize_rich_text(product.description),
         "short_desc": product.short_desc,
         "currency": product.currency,
         "price": product.price,

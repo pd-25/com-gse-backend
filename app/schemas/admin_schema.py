@@ -2,6 +2,8 @@ from decimal import Decimal
 
 from pydantic import BaseModel, EmailStr, Field, field_validator
 
+from app.core.rich_text import sanitize_rich_text
+
 
 class AdminLoginRequest(BaseModel):
     email: EmailStr
@@ -40,6 +42,11 @@ class CategoryAdminRequest(BaseModel):
     parent_id: int | None = None
     is_active: bool = True
 
+    @field_validator("description", "quality_standards", "buying_guide")
+    @classmethod
+    def sanitize_long_form_content(cls, value: str | None) -> str | None:
+        return sanitize_rich_text(value)
+
 
 class ProductImageAdminRequest(BaseModel):
     image: str = Field(min_length=1)
@@ -74,6 +81,11 @@ class ProductAdminRequest(BaseModel):
     subcategory_id: int | None = None
     id_recomended: bool = False
     images: list[ProductImageAdminRequest] = Field(default_factory=list)
+
+    @field_validator("description")
+    @classmethod
+    def sanitize_long_form_content(cls, value: str | None) -> str | None:
+        return sanitize_rich_text(value)
 
 
 class HeroBannerAdminRequest(BaseModel):

@@ -21,6 +21,8 @@ class CatalogProductResponse(BaseModel):
     slug: str
     title: str
     brand: Optional[str] = None
+    description: Optional[str] = None
+    short_desc: Optional[str] = None
     currency: str
     price: Decimal
     old_price: Optional[Decimal] = None
