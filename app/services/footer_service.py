@@ -26,6 +26,8 @@ def fetch_footer(db: Session) -> FooterResponse:
     )
     return FooterResponse(
         settings=settings,
+        popular_categories_heading=settings.popular_categories_heading,
+        customer_services_heading=settings.customer_services_heading,
         popular_categories=[link for link in links if link.section == "popular_category"],
         customer_services=[link for link in links if link.section == "customer_service"],
     )
