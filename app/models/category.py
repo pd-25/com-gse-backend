@@ -7,6 +7,8 @@ class Categories(Base):
     name = Column(String(255), nullable=False)
     slug = Column(String(255),unique=True, index=True, nullable=False)
     description = Column(Text, nullable=True)
+    quality_standards = Column(Text, nullable=True)
+    buying_guide = Column(Text, nullable=True)
     image = Column(Text, nullable=True)
     thumbnail_image = Column(Text, nullable=True)
     showcase_image = Column(Text, nullable=True)
