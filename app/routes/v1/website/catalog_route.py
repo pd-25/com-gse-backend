@@ -1,6 +1,6 @@
 from typing import List
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -14,6 +14,7 @@ from app.schemas.catalog_schema import (
 from app.schemas.response import APIResponse
 from app.services.catalog_service import (
     fetch_catalog_facets,
+    fetch_catalog_product_by_slug,
     fetch_catalog_products,
     fetch_search_suggestions,
 )
@@ -33,6 +34,25 @@ def get_catalog_products(
         message="Catalog products fetched successfully",
         data=products,
         meta=meta,
+    )
+
+
+@catalog_router.get(
+    "/products/{slug}/",
+    response_model=APIResponse[CatalogProductResponse],
+)
+def get_catalog_product(slug: str, db: Session = Depends(get_db)):
+    product = fetch_catalog_product_by_slug(slug=slug, db=db)
+    if product is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Product not found",
+        )
+    return APIResponse(
+        success=True,
+        message="Catalog product fetched successfully",
+        data=product,
+        meta={},
     )
 
 
