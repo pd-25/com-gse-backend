@@ -60,21 +60,30 @@ SECRET_KEY=your-secret-key
 Start the FastAPI app with Uvicorn:
 
 ```bash
-uvicorn main:app --reload
+uvicorn main:app --reload --port 8002
 ```
 
 Or, if you are using `uv`:
 
 ```bash
-uv run uvicorn main:app --reload
+uv run uvicorn main:app --reload --port 8002
 ```
 
-Then open `http://127.0.0.1:8000/` in your browser.
+Then open `http://127.0.0.1:8002/` in your browser. The companion frontend's
+local environment is configured to use this port because port 8000 may be used
+by another local service.
 
 ## Available endpoints
 
 - `GET /` — welcome message
-- `GET /users/` — user route placeholder
+- `GET /api/v1/web/categories/` — category listing
+- `GET /api/v1/web/catalog/products/` — searchable product catalog
+- `GET /api/v1/web/footer/` — footer configuration and links
+- `POST /api/v1/web/auth/register/` — customer registration
+- `POST /api/v1/web/auth/login/` — customer login
+- `POST /api/v1/web/auth/refresh-token/` — rotate authentication tokens
+- `GET /api/v1/web/auth/me/` — authenticated customer profile
+- `POST /api/v1/web/auth/logout/` — revoke the current access token
 
 ## Project structure
 
