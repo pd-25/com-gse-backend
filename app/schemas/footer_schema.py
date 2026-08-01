@@ -6,6 +6,8 @@ class FooterSettingsResponse(BaseModel):
 
     brand_name: str
     brand_highlight: str | None
+    popular_categories_heading: str
+    customer_services_heading: str
     contact_heading: str
     whatsapp_label: str
     whatsapp_number: str
@@ -36,8 +38,8 @@ class FooterLinkResponse(BaseModel):
 
 class FooterResponse(BaseModel):
     settings: FooterSettingsResponse
-    popular_categories_heading: str = "Most Popular Categories"
-    customer_services_heading: str = "Customer Services"
+    popular_categories_heading: str
+    customer_services_heading: str
     popular_categories: list[FooterLinkResponse]
     customer_services: list[FooterLinkResponse]
 

@@ -9,6 +9,12 @@ class FooterSetting(Base):
     id = Column(Integer, primary_key=True)
     brand_name = Column(String(255), nullable=False)
     brand_highlight = Column(String(255), nullable=True)
+    popular_categories_heading = Column(
+        String(100), nullable=False, server_default="Most Popular Categories"
+    )
+    customer_services_heading = Column(
+        String(100), nullable=False, server_default="Customer Services"
+    )
     contact_heading = Column(String(100), nullable=False, server_default="Contact Us")
     whatsapp_label = Column(String(100), nullable=False, server_default="WhatsApp")
     whatsapp_number = Column(String(40), nullable=False)
