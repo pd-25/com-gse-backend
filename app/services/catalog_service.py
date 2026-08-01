@@ -181,6 +181,16 @@ def fetch_catalog_products(filters: CatalogFilterSchema, db: Session):
     )
 
 
+def fetch_catalog_product_by_slug(slug: str, db: Session):
+    product = (
+        db.query(Product)
+        .options(joinedload(Product.images))
+        .filter(Product.slug == slug, Product.deleted_at.is_(None))
+        .first()
+    )
+    return _product_response(product) if product else None
+
+
 def fetch_search_suggestions(filters: SearchSuggestionFilterSchema, db: Session):
     query_text = filters.q.strip()
     if len(query_text) < 2:
