@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, status
+from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.database.session import get_db
@@ -12,7 +13,12 @@ from app.schemas.payment_schema import (
 )
 from app.schemas.response import APIResponse
 from app.services.auth_service import get_current_user
-from app.services.payment_service import create_payment_order, fetch_bookings, verify_payment
+from app.services.payment_service import (
+    create_payment_order,
+    fetch_bookings,
+    generate_invoice_html,
+    verify_payment,
+)
 
 
 payment_router = APIRouter()
@@ -57,4 +63,19 @@ def get_bookings(
         success=True,
         message="Bookings fetched successfully",
         data=fetch_bookings(user=user, db=db),
+    )
+
+
+@payment_router.get(
+    "/bookings/{order_number}/invoice/",
+    response_class=HTMLResponse,
+)
+def get_booking_invoice(
+    order_number: str,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    return HTMLResponse(
+        content=generate_invoice_html(order_number=order_number, user=user, db=db),
+        headers={"Content-Disposition": f'inline; filename="{order_number}-invoice.html"'},
     )
