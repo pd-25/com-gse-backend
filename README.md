@@ -53,7 +53,17 @@ Create a `.env` file in the project root with any required secrets, for example:
 
 ```env
 SECRET_KEY=your-secret-key
+RAZORPAY_KEY_ID=rzp_test_your_key_id
+RAZORPAY_KEY_SECRET=your_test_key_secret
+RAZORPAY_PAYMENT_CURRENCY=INR
+USD_TO_INR_RATE=83.00
 ```
+
+Use Razorpay **Test Mode** credentials for local payment testing. Keep
+`RAZORPAY_KEY_SECRET` on the backend only; the order API returns the public key
+ID required by Razorpay Checkout. Catalog prices stored in USD are converted to
+INR using `USD_TO_INR_RATE`, and the backend recalculates every order total from
+database product prices.
 
 ## Running the app
 
@@ -84,6 +94,9 @@ by another local service.
 - `POST /api/v1/web/auth/refresh-token/` — rotate authentication tokens
 - `GET /api/v1/web/auth/me/` — authenticated customer profile
 - `POST /api/v1/web/auth/logout/` — revoke the current access token
+- `POST /api/v1/web/payments/orders/` — create a Razorpay order from cart items
+- `POST /api/v1/web/payments/verify/` — verify payment and confirm the booking
+- `GET /api/v1/web/payments/bookings/` — list the authenticated user's bookings
 
 ## Project structure
 

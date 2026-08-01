@@ -12,3 +12,4 @@ from app.models.hero_banner import HeroBanner  # noqa: F401
 from app.models.homepage_section import HomepageSection  # noqa: F401
 from app.models.footer_setting import FooterLink, FooterSetting  # noqa: F401
 from app.models.revoked_token import RevokedToken  # noqa: F401
+from app.models.order import Order, OrderItem  # noqa: F401

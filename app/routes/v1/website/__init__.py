@@ -7,6 +7,7 @@ from app.routes.v1.website.homepage_product_route import homepage_product_router
 from app.routes.v1.website.catalog_route import catalog_router
 from app.routes.v1.website.auth_route import auth_router
 from app.routes.v1.website.footer_route import footer_router
+from app.routes.v1.website.payment_route import payment_router
 
 
 website_router = APIRouter()
@@ -41,4 +42,9 @@ website_router.include_router(
     footer_router,
     prefix="/footer",
     tags=["Website - Footer"],
+)
+website_router.include_router(
+    payment_router,
+    prefix="/payments",
+    tags=["Website - Payments & Bookings"],
 )
