@@ -3,6 +3,7 @@ import math
 from sqlalchemy import and_, func, or_
 from sqlalchemy.orm import Session, joinedload
 
+from app.core.rich_text import sanitize_rich_text
 from app.models.category import Categories
 from app.models.homepage_section import HomepageSection
 from app.models.product import Product
@@ -35,6 +36,8 @@ def _product_response(product: Product):
         slug=product.slug,
         title=product.title,
         brand=product.brand,
+        description=sanitize_rich_text(product.description),
+        short_desc=product.short_desc,
         currency=product.currency or "USD",
         price=product.price,
         old_price=product.old_price,
