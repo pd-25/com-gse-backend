@@ -2,6 +2,7 @@ import base64
 import hashlib
 import hmac
 import json
+from html import escape
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from urllib.error import HTTPError, URLError
@@ -23,6 +24,9 @@ from app.schemas.payment_schema import (
     PaymentVerificationResponse,
     VerifyPaymentRequest,
 )
+
+
+BRAND_NAME = "Global Source Expo Ltd"
 
 
 def _require_razorpay_config() -> tuple[str, str]:
@@ -198,7 +202,7 @@ def create_payment_order(
         order_number=order.order_number,
         amount=_amount_subunits(order.total),
         currency=order.currency,
-        name="Global Source Expo",
+        name=BRAND_NAME,
         description=f"Payment for booking {order.order_number}",
         customer_name=" ".join(filter(None, [user.first_name, user.last_name])),
         customer_email=user.email,
@@ -253,3 +257,90 @@ def fetch_bookings(user: User, db: Session) -> list[BookingResponse]:
         .all()
     )
     return [_booking_response(order) for order in orders]
+
+
+def generate_invoice_html(order_number: str, user: User, db: Session) -> str:
+    order = (
+        db.query(Order)
+        .options(joinedload(Order.items))
+        .filter(Order.order_number == order_number, Order.user_id == user.id)
+        .first()
+    )
+    if order is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Booking not found")
+
+    def money(value: Decimal) -> str:
+        return f"{order.currency} {value:,.2f}"
+
+    item_rows = "".join(
+        f"""
+        <tr>
+          <td>{escape(item.product_title)}</td>
+          <td class="number">{item.quantity}</td>
+          <td class="number">{money(item.unit_price)}</td>
+          <td class="number">{money(item.line_total)}</td>
+        </tr>
+        """
+        for item in order.items
+    )
+    payment_reference = escape(order.razorpay_payment_id or "Awaiting payment")
+    paid_label = order.paid_at.strftime("%d %b %Y, %I:%M %p") if order.paid_at else "Not paid"
+    customer_name = escape(" ".join(filter(None, [user.first_name, user.last_name])))
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Invoice {escape(order.order_number)} | {BRAND_NAME}</title>
+  <style>
+    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; padding: 32px; color: #17211d; font: 14px/1.5 Arial, sans-serif; background: #f5f7f6; }}
+    .invoice {{ max-width: 900px; margin: auto; padding: 44px; background: #fff; border-top: 6px solid #75b900; box-shadow: 0 8px 28px #0001; }}
+    header {{ display: flex; justify-content: space-between; gap: 24px; padding-bottom: 28px; border-bottom: 1px solid #dfe5e2; }}
+    h1 {{ margin: 0; color: #054934; font-size: 28px; }}
+    .brand {{ color: #054934; font-size: 22px; font-weight: 800; }}
+    .muted {{ color: #68736e; }}
+    .status {{ display: inline-block; margin-top: 8px; padding: 5px 12px; border-radius: 99px; background: #e8f4cf; color: #426600; font-weight: 700; text-transform: uppercase; }}
+    .details {{ display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin: 28px 0; }}
+    table {{ width: 100%; border-collapse: collapse; }}
+    th, td {{ padding: 12px 10px; border-bottom: 1px solid #e6ebe8; text-align: left; }}
+    th {{ background: #f2f7e9; color: #054934; }}
+    .number {{ text-align: right; white-space: nowrap; }}
+    .totals {{ width: min(360px, 100%); margin: 24px 0 0 auto; }}
+    .totals div {{ display: flex; justify-content: space-between; padding: 6px 0; }}
+    .grand {{ margin-top: 8px; padding-top: 12px !important; border-top: 2px solid #054934; color: #054934; font-size: 18px; font-weight: 800; }}
+    .actions {{ max-width: 900px; margin: 16px auto; text-align: right; }}
+    button {{ border: 0; border-radius: 8px; padding: 10px 18px; color: #fff; background: #054934; cursor: pointer; }}
+    footer {{ margin-top: 40px; padding-top: 18px; border-top: 1px solid #dfe5e2; color: #68736e; text-align: center; }}
+    @media print {{ body {{ padding: 0; background: #fff; }} .invoice {{ box-shadow: none; }} .actions {{ display: none; }} }}
+    @media (max-width: 600px) {{ body {{ padding: 12px; }} .invoice {{ padding: 24px; }} header, .details {{ display: block; }} header > div + div, .details > div + div {{ margin-top: 18px; }} }}
+  </style>
+</head>
+<body>
+  <div class="actions"><button type="button" onclick="window.print()">Print / Save as PDF</button></div>
+  <main class="invoice">
+    <header>
+      <div><div class="brand">{BRAND_NAME}</div><div class="muted">Product Booking Invoice</div></div>
+      <div><h1>INVOICE</h1><div><strong>{escape(order.order_number)}</strong></div><span class="status">{escape(order.status)}</span></div>
+    </header>
+    <section class="details">
+      <div><strong>Bill To</strong><br>{customer_name}<br>{escape(user.email)}<br>{escape(user.phone or "")}</div>
+      <div><strong>Booking Date</strong><br>{order.created_at:%d %b %Y, %I:%M %p}<br><br><strong>Payment Date</strong><br>{paid_label}</div>
+    </section>
+    <table>
+      <thead><tr><th>Product</th><th class="number">Quantity</th><th class="number">Unit Price</th><th class="number">Amount</th></tr></thead>
+      <tbody>{item_rows}</tbody>
+    </table>
+    <section class="totals">
+      <div><span>Subtotal</span><strong>{money(order.subtotal)}</strong></div>
+      <div><span>Tax</span><strong>{money(order.tax)}</strong></div>
+      <div class="grand"><span>Total</span><span>{money(order.total)}</span></div>
+    </section>
+    <section class="details">
+      <div><strong>Razorpay Order</strong><br>{escape(order.razorpay_order_id or "Not created")}</div>
+      <div><strong>Payment Reference</strong><br>{payment_reference}</div>
+    </section>
+    <footer>Thank you for booking with {BRAND_NAME}.</footer>
+  </main>
+</body>
+</html>"""

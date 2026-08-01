@@ -57,6 +57,9 @@ RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_test_key_secret
 RAZORPAY_PAYMENT_CURRENCY=INR
 USD_TO_INR_RATE=83.00
+ADMIN_NAME=Admin GSE
+ADMIN_EMAIL=admin@example.com
+ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
 Use Razorpay **Test Mode** credentials for local payment testing. Keep
@@ -64,6 +67,15 @@ Use Razorpay **Test Mode** credentials for local payment testing. Keep
 ID required by Razorpay Checkout. Catalog prices stored in USD are converted to
 INR using `USD_TO_INR_RATE`, and the backend recalculates every order total from
 database product prices.
+
+Admin credentials are read only when creating a missing administrator; the
+seeder never overwrites an existing password. After configuring the three
+`ADMIN_*` variables, run `python scripts/bootstrap_admin.py`. To recover an
+existing account, run `python scripts/set_admin_password.py admin@example.com`
+and enter the new password interactively.
+
+For local setup without storing a plaintext password in `.env`, run
+`python scripts/create_admin.py` and follow the secure interactive prompts.
 
 ## Running the app
 
