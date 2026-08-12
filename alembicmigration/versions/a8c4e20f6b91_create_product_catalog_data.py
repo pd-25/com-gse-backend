@@ -134,6 +134,26 @@ def upgrade() -> None:
         ],
     )
 
+    categories_table = sa.table(
+        "categories",
+        sa.column("id", sa.Integer()),
+        sa.column("name", sa.String()),
+        sa.column("slug", sa.String()),
+        sa.column("description", sa.Text()),
+        sa.column("is_active", sa.Boolean()),
+    )
+    op.bulk_insert(
+        categories_table,
+        [
+            {"id": 1, "name": "Fresh Fruits", "slug": "fresh-fruits", "description": "Fresh seasonal and year-round fruits.", "is_active": True},
+            {"id": 2, "name": "Fresh Vegetables", "slug": "fresh-vegetables", "description": "Leafy greens, roots, and everyday vegetables.", "is_active": True},
+            {"id": 3, "name": "Dairy & Eggs", "slug": "dairy-eggs", "description": "Milk, cheese, yogurt, butter, and eggs.", "is_active": True},
+            {"id": 4, "name": "Bakery", "slug": "bakery", "description": "Fresh bread, pastries, cakes, and baked staples.", "is_active": True},
+            {"id": 5, "name": "Meat & Seafood", "slug": "meat-seafood", "description": "Fresh and frozen meat and seafood selections.", "is_active": True},
+            {"id": 6, "name": "Snacks", "slug": "snacks", "description": "Popular savory snacks, confectionery, nuts.", "is_active": True},
+        ]
+    )
+
     products_table = sa.table(
         "products",
         sa.column("id", sa.Integer()),
@@ -183,5 +203,7 @@ def downgrade() -> None:
     op.execute("DELETE FROM product_views WHERE product_id BETWEEN 21 AND 44")
     op.execute("DELETE FROM product_images WHERE product_id BETWEEN 21 AND 44")
     op.execute("DELETE FROM products WHERE id BETWEEN 21 AND 44")
+    op.execute("DELETE FROM categories WHERE id BETWEEN 1 AND 6")
     op.execute("DELETE FROM homepage_sections WHERE section_key = 'product_catalog'")
     op.drop_column("products", "brand")
+
