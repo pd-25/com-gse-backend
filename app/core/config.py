@@ -20,6 +20,13 @@ class Settings:
     RAZORPAY_KEY_SECRET: str | None = os.getenv("RAZORPAY_KEY_SECRET")
     RAZORPAY_PAYMENT_CURRENCY: str = os.getenv("RAZORPAY_PAYMENT_CURRENCY", "INR").upper()
     USD_TO_INR_RATE: str = os.getenv("USD_TO_INR_RATE", "83.00")
+    SSLCOMMERZ_STORE_ID: str | None = os.getenv("SSLCOMMERZ_STORE_ID")
+    SSLCOMMERZ_STORE_PASSWORD: str | None = os.getenv("SSLCOMMERZ_STORE_PASSWORD")
+    SSLCOMMERZ_IS_SANDBOX: bool = os.getenv("SSLCOMMERZ_IS_SANDBOX", "true").lower() in {"1", "true", "yes"}
+    SSLCOMMERZ_PAYMENT_CURRENCY: str = os.getenv("SSLCOMMERZ_PAYMENT_CURRENCY", "BDT").upper()
+    SSLCOMMERZ_CALLBACK_BASE_URL: str | None = os.getenv("SSLCOMMERZ_CALLBACK_BASE_URL")
+    SSLCOMMERZ_FRONTEND_RETURN_URL: str | None = os.getenv("SSLCOMMERZ_FRONTEND_RETURN_URL")
+    USD_TO_BDT_RATE: str = os.getenv("USD_TO_BDT_RATE", "122.00")
     AWS_S3_BUCKET: str | None = os.getenv("AWS_S3_BUCKET")
     AWS_S3_REGION: str = os.getenv("AWS_S3_REGION", "ap-south-1")
     AWS_S3_PUBLIC_BASE_URL: str | None = os.getenv("AWS_S3_PUBLIC_BASE_URL")

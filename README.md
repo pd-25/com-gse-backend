@@ -57,6 +57,13 @@ RAZORPAY_KEY_ID=rzp_test_your_key_id
 RAZORPAY_KEY_SECRET=your_test_key_secret
 RAZORPAY_PAYMENT_CURRENCY=INR
 USD_TO_INR_RATE=83.00
+SSLCOMMERZ_STORE_ID=your-sandbox-store-id
+SSLCOMMERZ_STORE_PASSWORD=your-sandbox-store-password
+SSLCOMMERZ_IS_SANDBOX=true
+SSLCOMMERZ_PAYMENT_CURRENCY=BDT
+USD_TO_BDT_RATE=122.00
+SSLCOMMERZ_CALLBACK_BASE_URL=https://your-public-api.example.com
+SSLCOMMERZ_FRONTEND_RETURN_URL=http://localhost:3000/payment/result
 ADMIN_NAME=Admin GSE
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=replace-with-a-strong-password
@@ -67,6 +74,11 @@ Use Razorpay **Test Mode** credentials for local payment testing. Keep
 ID required by Razorpay Checkout. Catalog prices stored in USD are converted to
 INR using `USD_TO_INR_RATE`, and the backend recalculates every order total from
 database product prices.
+
+SSLCommerz uses hosted checkout. Set a publicly reachable callback base URL
+(use a tunnel during local development), and configure
+`/api/v1/web/payments/sslcommerz/ipn/` as the store's HTTP IPN listener. Every
+successful notification is validated server-to-server before fulfillment.
 
 Admin credentials are read only when creating a missing administrator; the
 seeder never overwrites an existing password. After configuring the three
@@ -108,6 +120,8 @@ by another local service.
 - `POST /api/v1/web/auth/logout/` — revoke the current access token
 - `POST /api/v1/web/payments/orders/` — create a Razorpay order from cart items
 - `POST /api/v1/web/payments/verify/` — verify payment and confirm the booking
+- `POST /api/v1/web/payments/sslcommerz/orders/` — create an SSLCommerz hosted checkout session
+- `POST /api/v1/web/payments/sslcommerz/{success|fail|cancel|ipn}/` — SSLCommerz callbacks
 - `GET /api/v1/web/payments/bookings/` — list the authenticated user's bookings
 
 ## Project structure

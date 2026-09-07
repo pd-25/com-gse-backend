@@ -18,8 +18,14 @@ class Order(Base):
     tax = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
     total = Column(Numeric(12, 2), nullable=False)
     receipt = Column(String(40), nullable=False, unique=True)
+    payment_provider = Column(String(30), nullable=False, default="razorpay", server_default="razorpay")
     razorpay_order_id = Column(String(100), nullable=True, unique=True, index=True)
     razorpay_payment_id = Column(String(100), nullable=True, unique=True, index=True)
+    sslcommerz_transaction_id = Column(String(100), nullable=True, unique=True, index=True)
+    sslcommerz_session_key = Column(String(255), nullable=True, unique=True)
+    sslcommerz_validation_id = Column(String(100), nullable=True, unique=True)
+    sslcommerz_bank_transaction_id = Column(String(100), nullable=True)
+    sslcommerz_card_type = Column(String(100), nullable=True)
     created_at = Column(
         DateTime,
         nullable=False,

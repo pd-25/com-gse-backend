@@ -6,6 +6,7 @@ from html import escape
 from datetime import datetime
 from decimal import Decimal, ROUND_HALF_UP
 from urllib.error import HTTPError, URLError
+from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 from uuid import uuid4
 
@@ -20,8 +21,10 @@ from app.schemas.payment_schema import (
     BookingItemResponse,
     BookingResponse,
     CreatePaymentOrderRequest,
+    CreateSSLCommerzOrderRequest,
     PaymentOrderResponse,
     PaymentVerificationResponse,
+    SSLCommerzOrderResponse,
     VerifyPaymentRequest,
 )
 
@@ -38,13 +41,15 @@ def _require_razorpay_config() -> tuple[str, str]:
     return settings.RAZORPAY_KEY_ID, settings.RAZORPAY_KEY_SECRET
 
 
-def _payment_price(price: Decimal, source_currency: str | None) -> Decimal:
-    target = settings.RAZORPAY_PAYMENT_CURRENCY
+def _payment_price(price: Decimal, source_currency: str | None, target_currency: str | None = None) -> Decimal:
+    target = target_currency or settings.RAZORPAY_PAYMENT_CURRENCY
     source = (source_currency or "USD").upper()
     if source == target:
         converted = price
     elif source == "USD" and target == "INR":
         converted = price * Decimal(settings.USD_TO_INR_RATE)
+    elif source == "USD" and target == "BDT":
+        converted = price * Decimal(settings.USD_TO_BDT_RATE)
     else:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
@@ -104,6 +109,12 @@ def _booking_response(order: Order) -> BookingResponse:
         subtotal=order.subtotal,
         tax=order.tax,
         total=order.total,
+        payment_provider=order.payment_provider,
+        payment_reference=(
+            order.razorpay_payment_id
+            if order.payment_provider == "razorpay"
+            else order.sslcommerz_bank_transaction_id or order.sslcommerz_transaction_id
+        ),
         razorpay_order_id=order.razorpay_order_id,
         razorpay_payment_id=order.razorpay_payment_id,
         created_at=order.created_at,
@@ -210,6 +221,169 @@ def create_payment_order(
     )
 
 
+def _require_sslcommerz_config() -> tuple[str, str, str]:
+    if not settings.SSLCOMMERZ_STORE_ID or not settings.SSLCOMMERZ_STORE_PASSWORD:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="SSLCommerz credentials are not configured",
+        )
+    if not settings.SSLCOMMERZ_CALLBACK_BASE_URL:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="SSLCOMMERZ_CALLBACK_BASE_URL is not configured",
+        )
+    host = "https://sandbox.sslcommerz.com" if settings.SSLCOMMERZ_IS_SANDBOX else "https://securepay.sslcommerz.com"
+    return settings.SSLCOMMERZ_STORE_ID, settings.SSLCOMMERZ_STORE_PASSWORD, host
+
+
+def _sslcommerz_request(url: str, data: dict[str, str] | None = None) -> dict:
+    request = Request(
+        url,
+        data=urlencode(data).encode() if data is not None else None,
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        method="POST" if data is not None else "GET",
+    )
+    try:
+        with urlopen(request, timeout=20) as response:
+            return json.load(response)
+    except HTTPError as error:
+        try:
+            detail = json.load(error).get("failedreason")
+        except (json.JSONDecodeError, AttributeError):
+            detail = None
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=detail or "SSLCommerz rejected the request")
+    except (URLError, TimeoutError):
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail="Unable to connect to SSLCommerz")
+
+
+def create_sslcommerz_order(
+    payload: CreateSSLCommerzOrderRequest,
+    user: User,
+    db: Session,
+) -> SSLCommerzOrderResponse:
+    store_id, store_password, host = _require_sslcommerz_config()
+    quantities: dict[int, int] = {}
+    for item in payload.items:
+        quantities[item.product_id] = quantities.get(item.product_id, 0) + item.quantity
+        if quantities[item.product_id] > 100:
+            raise HTTPException(status_code=422, detail="A product quantity cannot exceed 100")
+
+    products = db.query(Product).filter(Product.id.in_(quantities), Product.deleted_at.is_(None)).all()
+    product_by_id = {product.id: product for product in products}
+    missing = sorted(set(quantities) - set(product_by_id))
+    if missing:
+        raise HTTPException(status_code=404, detail=f"Products not found: {', '.join(map(str, missing))}")
+
+    default_address = next((address for address in user.addresses if address.is_default and address.deleted_at is None), None)
+    address = payload.address or (default_address.address_line_1 if default_address else None)
+    city = payload.city or (default_address.city if default_address else None)
+    postcode = payload.postcode or (default_address.postal_code if default_address else None)
+    country = payload.country or (
+        default_address.country.name if default_address and default_address.country else None
+    )
+    if not all((address, city, postcode, country)):
+        raise HTTPException(status_code=422, detail="A complete billing address is required for SSLCommerz")
+    if not user.phone:
+        raise HTTPException(status_code=422, detail="A customer phone number is required for SSLCommerz")
+
+    currency = settings.SSLCOMMERZ_PAYMENT_CURRENCY
+    order_number = f"GSE-{datetime.now():%Y%m%d}-{uuid4().hex[:8].upper()}"
+    transaction_id = f"GSESSL-{uuid4().hex[:24].upper()}"
+    order = Order(
+        order_number=order_number, user_id=user.id, status="pending", currency=currency,
+        subtotal=Decimal("0"), tax=Decimal("0"), total=Decimal("0"),
+        receipt=f"gse_{uuid4().hex[:20]}", payment_provider="sslcommerz",
+        sslcommerz_transaction_id=transaction_id,
+    )
+    for product_id, quantity in quantities.items():
+        product = product_by_id[product_id]
+        if product.price is None or product.price <= 0:
+            raise HTTPException(status_code=422, detail=f"Product {product_id} is not available for payment")
+        unit_price = _payment_price(product.price, product.currency, currency)
+        line_total = unit_price * quantity
+        order.items.append(OrderItem(
+            product_id=product.id, product_title=product.title, product_slug=product.slug,
+            unit_price=unit_price, quantity=quantity, line_total=line_total,
+        ))
+        order.subtotal += line_total
+    order.total = order.subtotal + order.tax
+    db.add(order)
+    db.commit()
+
+    callback_base = settings.SSLCOMMERZ_CALLBACK_BASE_URL.rstrip("/")
+    try:
+        response = _sslcommerz_request(f"{host}/gwprocess/v4/api.php", {
+            "store_id": store_id, "store_passwd": store_password,
+            "total_amount": f"{order.total:.2f}", "currency": currency, "tran_id": transaction_id,
+            "success_url": f"{callback_base}/api/v1/web/payments/sslcommerz/success/",
+            "fail_url": f"{callback_base}/api/v1/web/payments/sslcommerz/fail/",
+            "cancel_url": f"{callback_base}/api/v1/web/payments/sslcommerz/cancel/",
+            "ipn_url": f"{callback_base}/api/v1/web/payments/sslcommerz/ipn/",
+            "cus_name": " ".join(filter(None, [user.first_name, user.last_name])),
+            "cus_email": user.email, "cus_add1": address, "cus_city": city,
+            "cus_postcode": postcode, "cus_country": country, "cus_phone": user.phone,
+            "shipping_method": "NO", "product_name": f"Booking {order_number}",
+            "product_category": "ecommerce", "product_profile": "general",
+            "value_a": order_number,
+        })
+    except HTTPException:
+        order.status = "failed"
+        db.commit()
+        raise
+    gateway_url = response.get("GatewayPageURL")
+    session_key = response.get("sessionkey")
+    if response.get("status") != "SUCCESS" or not gateway_url or not session_key:
+        order.status = "failed"
+        db.commit()
+        raise HTTPException(status_code=502, detail=response.get("failedreason") or "SSLCommerz session creation failed")
+    order.sslcommerz_session_key = session_key
+    db.commit()
+    return SSLCommerzOrderResponse(
+        gateway_url=gateway_url, session_key=session_key, transaction_id=transaction_id,
+        order_number=order_number, amount=order.total, currency=currency,
+    )
+
+
+def process_sslcommerz_notification(form: dict[str, str], db: Session) -> Order:
+    transaction_id = form.get("tran_id")
+    order = db.query(Order).options(joinedload(Order.items)).filter(
+        Order.sslcommerz_transaction_id == transaction_id,
+        Order.payment_provider == "sslcommerz",
+    ).first()
+    if order is None:
+        raise HTTPException(status_code=404, detail="Payment order not found")
+    notification_status = form.get("status", "").upper()
+    if notification_status not in {"VALID", "VALIDATED"}:
+        if order.status != "paid":
+            order.status = "cancelled" if notification_status == "CANCELLED" else "failed"
+            db.commit()
+        return order
+    validation_id = form.get("val_id")
+    if not validation_id:
+        raise HTTPException(status_code=400, detail="Missing SSLCommerz validation ID")
+
+    store_id, store_password, host = _require_sslcommerz_config()
+    query = urlencode({"val_id": validation_id, "store_id": store_id, "store_passwd": store_password, "v": "1", "format": "json"})
+    validation = _sslcommerz_request(f"{host}/validator/api/validationserverAPI.php?{query}")
+    try:
+        valid_amount = Decimal(str(validation.get("amount"))).quantize(Decimal("0.01")) == Decimal(order.total).quantize(Decimal("0.01"))
+    except Exception:
+        valid_amount = False
+    if validation.get("status") not in {"VALID", "VALIDATED"} or validation.get("tran_id") != transaction_id or validation.get("currency") != order.currency or not valid_amount:
+        raise HTTPException(status_code=400, detail="SSLCommerz transaction validation failed")
+    if str(validation.get("risk_level", "0")) == "1":
+        order.status = "payment_review"
+    else:
+        order.status = "paid"
+        order.paid_at = order.paid_at or datetime.now()
+    order.sslcommerz_validation_id = validation_id
+    order.sslcommerz_bank_transaction_id = validation.get("bank_tran_id")
+    order.sslcommerz_card_type = validation.get("card_type")
+    db.commit()
+    db.refresh(order)
+    return order
+
+
 def verify_payment(
     payload: VerifyPaymentRequest,
     user: User,
@@ -283,7 +457,14 @@ def generate_invoice_html(order_number: str, user: User, db: Session) -> str:
         """
         for item in order.items
     )
-    payment_reference = escape(order.razorpay_payment_id or "Awaiting payment")
+    payment_reference = escape(
+        order.razorpay_payment_id
+        or order.sslcommerz_bank_transaction_id
+        or order.sslcommerz_transaction_id
+        or "Awaiting payment"
+    )
+    provider_label = "SSLCommerz Transaction" if order.payment_provider == "sslcommerz" else "Razorpay Order"
+    provider_order_id = order.sslcommerz_transaction_id if order.payment_provider == "sslcommerz" else order.razorpay_order_id
     paid_label = order.paid_at.strftime("%d %b %Y, %I:%M %p") if order.paid_at else "Not paid"
     customer_name = escape(" ".join(filter(None, [user.first_name, user.last_name])))
     return f"""<!doctype html>
@@ -337,7 +518,7 @@ def generate_invoice_html(order_number: str, user: User, db: Session) -> str:
       <div class="grand"><span>Total</span><span>{money(order.total)}</span></div>
     </section>
     <section class="details">
-      <div><strong>Razorpay Order</strong><br>{escape(order.razorpay_order_id or "Not created")}</div>
+      <div><strong>{provider_label}</strong><br>{escape(provider_order_id or "Not created")}</div>
       <div><strong>Payment Reference</strong><br>{payment_reference}</div>
     </section>
     <footer>Thank you for booking with {BRAND_NAME}.</footer>

@@ -19,6 +19,13 @@ class VerifyPaymentRequest(BaseModel):
     razorpay_signature: str = Field(min_length=1, max_length=200)
 
 
+class CreateSSLCommerzOrderRequest(CreatePaymentOrderRequest):
+    address: str | None = Field(default=None, min_length=1, max_length=255)
+    city: str | None = Field(default=None, min_length=1, max_length=100)
+    postcode: str | None = Field(default=None, min_length=1, max_length=20)
+    country: str | None = Field(default=None, min_length=1, max_length=100)
+
+
 class BookingItemResponse(BaseModel):
     product_id: int
     product_title: str
@@ -35,6 +42,8 @@ class BookingResponse(BaseModel):
     subtotal: Decimal
     tax: Decimal
     total: Decimal
+    payment_provider: str
+    payment_reference: str | None
     razorpay_order_id: str | None
     razorpay_payment_id: str | None
     created_at: datetime
@@ -58,3 +67,18 @@ class PaymentOrderResponse(BaseModel):
 class PaymentVerificationResponse(BaseModel):
     verified: bool
     booking: BookingResponse
+
+
+class SSLCommerzOrderResponse(BaseModel):
+    gateway_url: str
+    session_key: str
+    transaction_id: str
+    order_number: str
+    amount: Decimal
+    currency: str
+
+
+class SSLCommerzNotificationResponse(BaseModel):
+    transaction_id: str
+    order_number: str
+    status: str

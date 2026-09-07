@@ -271,8 +271,13 @@ def _order_dict(order: Order) -> dict:
         "subtotal": order.subtotal,
         "tax": order.tax,
         "total": order.total,
+        "payment_provider": order.payment_provider,
+        "payment_reference": order.razorpay_payment_id or order.sslcommerz_bank_transaction_id or order.sslcommerz_transaction_id,
         "razorpay_order_id": order.razorpay_order_id,
         "razorpay_payment_id": order.razorpay_payment_id,
+        "sslcommerz_transaction_id": order.sslcommerz_transaction_id,
+        "sslcommerz_validation_id": order.sslcommerz_validation_id,
+        "sslcommerz_card_type": order.sslcommerz_card_type,
         "created_at": order.created_at,
         "paid_at": order.paid_at,
         "items": [
